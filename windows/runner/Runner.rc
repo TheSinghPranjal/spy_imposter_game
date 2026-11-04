@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.the_lazy_bear_club" "\0"
-            VALUE "FileDescription", "spy_imposter_game" "\0"
+            VALUE "FileDescription", "Spy Imposter Game" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "spy_imposter_game" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.the_lazy_bear_club. All rights reserved." "\0"
             VALUE "OriginalFilename", "spy_imposter_game.exe" "\0"
-            VALUE "ProductName", "spy_imposter_game" "\0"
+            VALUE "ProductName", "Spy Imposter Game" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
