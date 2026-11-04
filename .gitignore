@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Release signing secrets. android/key.properties is also ignored there.
+*.jks
+*.keystore
+**/key.properties
+**/service-account*.json
+**/google-services.json
