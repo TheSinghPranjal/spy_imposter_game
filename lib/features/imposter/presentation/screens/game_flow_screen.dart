@@ -410,74 +410,182 @@ class _PlayerSetupView extends StatelessWidget {
     AppColors.paper,
   ];
 
+  static const _background = 'assets/images/players_background.webp';
+  static const _artSize = Size(940, 1672);
+
+  /// Top of the moon and the rooftop railing, in artwork pixels.
+  static const _moonTop = 223.0;
+  static const _railing = 680.0;
+
+  /// Colour of the artwork's top edge, used above it when it is pushed down.
+  static const _sky = Color(0xFF000927);
+  static const _signHeight = 76.0;
+
   @override
   Widget build(BuildContext context) {
     final players = session.players;
-    final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+    final media = MediaQuery.of(context);
+    final keyboard = media.viewInsets.bottom;
+    final keyboardOpen = keyboard > 0;
 
-    return _SceneScaffold(
-      image: 'assets/images/players_background.webp',
-      artBottom: 720,
-      reserve: 340,
-      onBack: onBack,
-      children: [
-        Center(
-          child: CreamPill(
-            child: Text(
-              GameConstants.bestWithLabel,
-              style: AppTextStyles.label(AppColors.ink),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        _NameInput(
-          controller: nameController,
-          error: nameError,
-          onChanged: onChanged,
-          onAdd: onAdd,
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: players.isEmpty
-              ? const _DashedNote(
-                  text:
-                      'Add at least ${GameConstants.minPlayers} agents to start.',
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  itemCount: players.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final p = players[i];
-                    return _AgentTile(
-                      initials: p.initials,
-                      position: p.position,
-                      name: p.name,
-                      color: _avatarColors[i % _avatarColors.length],
-                      onRemove: () => onRemove(p.id),
-                    );
-                  },
+    return Scaffold(
+      backgroundColor: _sky,
+      resizeToAvoidBottomInset: false,
+      body: LayoutBuilder(
+        builder: (context, c) {
+          final scale = math.max(
+            c.maxWidth / _artSize.width,
+            c.maxHeight / _artSize.height,
+          );
+          final signTop = media.padding.top + 10;
+          final signBottom = signTop + _signHeight;
+          // Push the art down so the moon shows below the sign.
+          final imageTop = math.max(0.0, signBottom + 12 - _moonTop * scale);
+          final bottomPad = keyboardOpen
+              ? keyboard + 12
+              : media.padding.bottom + 16;
+          // Badge sits on the railing, but never so low that the agent list
+          // gets less than ~150px on a short screen.
+          final badgeTop = keyboardOpen
+              ? signBottom + 14
+              : math.max(
+                  signBottom + 14,
+                  math.min(
+                    imageTop + _railing * scale - 8,
+                    c.maxHeight - bottomPad - 410,
+                  ),
+                );
+          const signLeft = 80.0;
+          const signRight = 16.0;
+
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Positioned(
+                top: imageTop,
+                left: 0,
+                right: 0,
+                height: _artSize.height * scale,
+                child: Image.asset(
+                  _background,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                  excludeFromSemantics: true,
+                  errorBuilder: (_, _, _) =>
+                      const ColoredBox(color: AppColors.night),
                 ),
-        ),
-        if (!keyboardOpen) ...[
-          Center(
-            child: CreamPill(
-              child: Text(
-                '${players.length} / ${GameConstants.maxPlayers} agents',
-                style: AppTextStyles.label(AppColors.ink),
               ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SpyButton(
-            label: 'NEXT',
-            icon: Icons.arrow_forward_rounded,
-            onPressed: players.length >= GameConstants.minPlayers
-                ? onContinue
-                : null,
-          ),
-        ],
-      ],
+              // Chains run from the top edge of the screen down to the sign.
+              Positioned(
+                top: 0,
+                left: signLeft + 30,
+                child: HangingChain(length: signTop + 8),
+              ),
+              Positioned(
+                top: 0,
+                right: signRight + 30,
+                child: HangingChain(length: signTop + 8),
+              ),
+              Positioned(
+                top: signTop,
+                left: signLeft,
+                right: signRight,
+                child: const NeonSign('WHO\'S PLAYING?', height: _signHeight),
+              ),
+              Positioned(
+                top: signTop + (_signHeight - 52) / 2,
+                left: 16,
+                child: NeonCircleButton(
+                  icon: Icons.arrow_back_rounded,
+                  tooltip: 'Back',
+                  onPressed: onBack,
+                ),
+              ),
+              Positioned(
+                top: badgeTop,
+                left: 24,
+                right: 24,
+                bottom: bottomPad,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: GoldBadge(
+                        icon: Icons.groups_rounded,
+                        label: GameConstants.bestWithLabel,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _NameInput(
+                      controller: nameController,
+                      error: nameError,
+                      onChanged: onChanged,
+                      onAdd: onAdd,
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: players.isEmpty
+                          ? const _DashedNote()
+                          : ListView.separated(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              itemCount: players.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 8),
+                              itemBuilder: (context, i) {
+                                final p = players[i];
+                                return _AgentTile(
+                                  initials: p.initials,
+                                  position: p.position,
+                                  name: p.name,
+                                  color:
+                                      _avatarColors[i % _avatarColors.length],
+                                  onRemove: () => onRemove(p.id),
+                                );
+                              },
+                            ),
+                    ),
+                    if (!keyboardOpen) ...[
+                      const SizedBox(height: 12),
+                      Center(
+                        child: CreamPill(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.groups_rounded,
+                                size: 22,
+                                color: AppColors.ink,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                '${players.length} / '
+                                '${GameConstants.maxPlayers} agents',
+                                style: AppTextStyles.label(
+                                  AppColors.ink,
+                                ).copyWith(fontSize: 16),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      SpyButton(
+                        label: 'NEXT',
+                        icon: Icons.arrow_forward_rounded,
+                        height: 60,
+                        fontSize: 20,
+                        onPressed: players.length >= GameConstants.minPlayers
+                            ? onContinue
+                            : null,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -606,14 +714,15 @@ class _DashedRule extends StatelessWidget {
 }
 
 class _DashedNote extends StatelessWidget {
-  const _DashedNote({required this.text});
-
-  final String text;
+  const _DashedNote();
 
   @override
   Widget build(BuildContext context) {
+    final base = AppTextStyles.body(
+      AppColors.textPrimary,
+    ).copyWith(fontSize: 17);
     return Align(
-      alignment: const Alignment(0, -0.2),
+      alignment: Alignment.topCenter,
       child: CustomPaint(
         painter: const DashedRoundedBorderPainter(
           color: AppColors.primary,
@@ -622,11 +731,39 @@ class _DashedNote extends StatelessWidget {
         ),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.body(AppColors.textPrimary),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          decoration: BoxDecoration(
+            color: const Color(0xB3060C1C),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.person_add_alt_1_rounded,
+                color: AppColors.primary,
+                size: 28,
+              ),
+              const SizedBox(width: 14),
+              Flexible(
+                child: Text.rich(
+                  TextSpan(
+                    style: base,
+                    children: [
+                      const TextSpan(text: 'Add at least '),
+                      TextSpan(
+                        text: '${GameConstants.minPlayers} agents',
+                        style: base.copyWith(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const TextSpan(text: ' to start.'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -653,17 +790,33 @@ class _NameInput extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          padding: const EdgeInsets.fromLTRB(18, 4, 6, 4),
+          height: 62,
+          padding: const EdgeInsets.fromLTRB(18, 0, 6, 0),
           decoration: BoxDecoration(
             color: AppColors.paper,
             borderRadius: BorderRadius.circular(AppRadii.pill),
             border: Border.all(
-              color: error != null ? AppColors.imposter : AppColors.paper,
+              color: error != null
+                  ? AppColors.imposter
+                  : const Color(0xFF9FE9FF),
               width: 2,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: (error != null ? AppColors.imposter : AppColors.primary)
+                    .withValues(alpha: 0.45),
+                blurRadius: 16,
+              ),
+            ],
           ),
           child: Row(
             children: [
+              const Icon(
+                Icons.person_outline_rounded,
+                color: AppColors.ink,
+                size: 30,
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: TextField(
                   controller: controller,
@@ -688,12 +841,20 @@ class _NameInput extends StatelessWidget {
                   ),
                 ),
               ),
+              Container(
+                width: 1.5,
+                height: 34,
+                margin: const EdgeInsets.symmetric(horizontal: 10),
+                color: AppColors.ink.withValues(alpha: 0.18),
+              ),
               Semantics(
                 button: true,
                 label: 'Add agent',
                 child: Material(
                   color: AppColors.primary,
                   shape: const CircleBorder(),
+                  shadowColor: AppColors.primary,
+                  elevation: 6,
                   child: InkWell(
                     customBorder: const CircleBorder(),
                     onTap: onAdd,

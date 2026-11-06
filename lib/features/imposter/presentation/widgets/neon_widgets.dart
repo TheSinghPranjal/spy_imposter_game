@@ -663,3 +663,214 @@ class NeonToggleRow extends StatelessWidget {
     );
   }
 }
+
+/// Hanging neon sign: gold text in a glowing blue frame.
+class NeonSign extends StatelessWidget {
+  const NeonSign(this.text, {super.key, this.height = 76});
+
+  final String text;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    const blue = Color(0xFF3D8BFF);
+    return Semantics(
+      header: true,
+      label: text,
+      excludeSemantics: true,
+      child: Container(
+        height: height,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: const Color(0xFF0B1226),
+          border: Border.all(color: const Color(0xFF2A3550), width: 3),
+          boxShadow: [
+            BoxShadow(color: blue.withValues(alpha: 0.55), blurRadius: 22),
+            const BoxShadow(
+              color: Color(0x99000000),
+              blurRadius: 12,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Container(
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(11),
+            color: const Color(0xFF0A0F1E),
+            border: Border.all(color: const Color(0xFF7DB6FF), width: 2.5),
+            boxShadow: [
+              BoxShadow(
+                color: blue.withValues(alpha: 0.9),
+                blurRadius: 10,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              text,
+              maxLines: 1,
+              style: const TextStyle(
+                fontFamily: AppFonts.numbers,
+                fontSize: 44,
+                fontWeight: FontWeight.w600,
+                height: 1,
+                color: Color(0xFFFFC52E),
+                shadows: [
+                  Shadow(color: Color(0xFFFF9A00), blurRadius: 12),
+                  Shadow(
+                    color: Colors.black,
+                    blurRadius: 2,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Vertical chain of links, for hanging a sign from the top of the screen.
+class HangingChain extends StatelessWidget {
+  const HangingChain({super.key, required this.length});
+
+  final double length;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: CustomPaint(
+        size: Size(12, length),
+        painter: const _ChainPainter(),
+      ),
+    );
+  }
+}
+
+class _ChainPainter extends CustomPainter {
+  const _ChainPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const link = 14.0;
+    final dark = Paint()
+      ..color = const Color(0xFF1C1A1F)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4;
+    final metal = Paint()
+      ..color = const Color(0xFF6E5A4E)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2;
+    final cx = size.width / 2;
+    var i = 0;
+    for (var y = size.height - link; y > -link; y -= link * 0.8, i++) {
+      final rect = i.isEven
+          ? Rect.fromLTWH(cx - 4, y, 8, link)
+          : Rect.fromLTWH(cx - 1.2, y, 2.4, link);
+      final r = RRect.fromRectAndRadius(rect, const Radius.circular(4));
+      canvas.drawRRect(r, dark);
+      canvas.drawRRect(r, metal);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Dark pill with a gold neon rim and speed stripes on both sides.
+class GoldBadge extends StatelessWidget {
+  const GoldBadge({super.key, required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const _Stripes(alignEnd: true),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+            decoration: BoxDecoration(
+              color: const Color(0xF20A1022),
+              borderRadius: BorderRadius.circular(AppRadii.pill),
+              border: Border.all(color: AppColors.accent, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: 0.45),
+                  blurRadius: 12,
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: AppColors.accent, size: 24),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        const _Stripes(alignEnd: false),
+      ],
+    );
+  }
+}
+
+class _Stripes extends StatelessWidget {
+  const _Stripes({required this.alignEnd});
+
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget bar(double w) => Container(
+      width: w,
+      height: 3,
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.accent,
+        borderRadius: BorderRadius.circular(2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accent.withValues(alpha: 0.6),
+            blurRadius: 4,
+          ),
+        ],
+      ),
+    );
+    return ExcludeSemantics(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: alignEnd
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        children: [bar(12), bar(18), bar(12)],
+      ),
+    );
+  }
+}
