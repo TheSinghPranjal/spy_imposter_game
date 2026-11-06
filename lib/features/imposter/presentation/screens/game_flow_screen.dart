@@ -31,18 +31,22 @@ class GameFlowScreen extends ConsumerStatefulWidget {
 class _GameFlowScreenState extends ConsumerState<GameFlowScreen>
     with WidgetsBindingObserver {
   final _nameController = TextEditingController();
+  final _nameFocus = FocusNode();
   String? _nameError;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // The player setup layout moves up while the name field has focus.
+    _nameFocus.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _nameController.dispose();
+    _nameFocus.dispose();
     super.dispose();
   }
 
@@ -137,6 +141,7 @@ class _GameFlowScreenState extends ConsumerState<GameFlowScreen>
         return _PlayerSetupView(
           session: session,
           nameController: _nameController,
+          nameFocus: _nameFocus,
           nameError: _nameError,
           onChanged: () => setState(() => _nameError = null),
           onAdd: () {
@@ -384,6 +389,7 @@ class _PlayerSetupView extends StatelessWidget {
   const _PlayerSetupView({
     required this.session,
     required this.nameController,
+    required this.nameFocus,
     required this.nameError,
     required this.onChanged,
     required this.onAdd,
@@ -394,6 +400,7 @@ class _PlayerSetupView extends StatelessWidget {
 
   final GameSession session;
   final TextEditingController nameController;
+  final FocusNode nameFocus;
   final String? nameError;
   final VoidCallback onChanged;
   final VoidCallback onAdd;
@@ -427,6 +434,10 @@ class _PlayerSetupView extends StatelessWidget {
     final media = MediaQuery.of(context);
     final keyboard = media.viewInsets.bottom;
     final keyboardOpen = keyboard > 0;
+    // Typing a name, or agents already listed: lift the form up under the
+    // sign so the list gets the room. Covers hardware keyboards too, where
+    // the keyboard inset stays 0.
+    final compact = keyboardOpen || nameFocus.hasFocus || players.isNotEmpty;
 
     return Scaffold(
       backgroundColor: _sky,
@@ -446,7 +457,7 @@ class _PlayerSetupView extends StatelessWidget {
               : media.padding.bottom + 16;
           // Badge sits on the railing, but never so low that the agent list
           // gets less than ~150px on a short screen.
-          final badgeTop = keyboardOpen
+          final badgeTop = compact
               ? signBottom + 14
               : math.max(
                   signBottom + 14,
@@ -466,13 +477,17 @@ class _PlayerSetupView extends StatelessWidget {
                 left: 0,
                 right: 0,
                 height: _artSize.height * scale,
-                child: Image.asset(
-                  _background,
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
-                  excludeFromSemantics: true,
-                  errorBuilder: (_, _, _) =>
-                      const ColoredBox(color: AppColors.night),
+                // Tapping the scene dismisses the keyboard.
+                child: GestureDetector(
+                  onTap: () => FocusScope.of(context).unfocus(),
+                  child: Image.asset(
+                    _background,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.topCenter,
+                    excludeFromSemantics: true,
+                    errorBuilder: (_, _, _) =>
+                        const ColoredBox(color: AppColors.night),
+                  ),
                 ),
               ),
               // Chains run from the top edge of the screen down to the sign.
@@ -501,7 +516,9 @@ class _PlayerSetupView extends StatelessWidget {
                   onPressed: onBack,
                 ),
               ),
-              Positioned(
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
                 top: badgeTop,
                 left: 24,
                 right: 24,
@@ -518,6 +535,7 @@ class _PlayerSetupView extends StatelessWidget {
                     const SizedBox(height: 18),
                     _NameInput(
                       controller: nameController,
+                      focusNode: nameFocus,
                       error: nameError,
                       onChanged: onChanged,
                       onAdd: onAdd,
@@ -774,12 +792,14 @@ class _DashedNote extends StatelessWidget {
 class _NameInput extends StatelessWidget {
   const _NameInput({
     required this.controller,
+    required this.focusNode,
     required this.error,
     required this.onChanged,
     required this.onAdd,
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final String? error;
   final VoidCallback onChanged;
   final VoidCallback onAdd;
@@ -820,10 +840,13 @@ class _NameInput extends StatelessWidget {
               Expanded(
                 child: TextField(
                   controller: controller,
+                  focusNode: focusNode,
                   onChanged: (_) => onChanged(),
                   textInputAction: TextInputAction.done,
                   textCapitalization: TextCapitalization.words,
-                  onSubmitted: (_) => onAdd(),
+                  // onEditingComplete instead of onSubmitted keeps the field
+                  // focused, so names can be added back to back.
+                  onEditingComplete: onAdd,
                   maxLength: GameConstants.maxNameLength,
                   style: AppTextStyles.title(AppColors.ink),
                   cursorColor: AppColors.primary,
