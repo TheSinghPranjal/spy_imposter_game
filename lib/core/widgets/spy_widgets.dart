@@ -35,9 +35,10 @@ class SpyScaffold extends StatelessWidget {
   }
 }
 
-enum SpyButtonStyle { primary, secondary, danger }
+enum SpyButtonStyle { primary, secondary, danger, gold, neonOutline }
 
 /// Pill button. Primary is neon cyan, secondary is an outline, danger is red.
+/// Gold and neonOutline are the glowing home-menu buttons.
 class SpyButton extends StatefulWidget {
   const SpyButton({
     super.key,
@@ -45,12 +46,16 @@ class SpyButton extends StatefulWidget {
     required this.onPressed,
     this.icon,
     this.style = SpyButtonStyle.primary,
+    this.height = 56,
+    this.fontSize = 18,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
   final SpyButtonStyle style;
+  final double height;
+  final double fontSize;
 
   @override
   State<SpyButton> createState() => _SpyButtonState();
@@ -61,13 +66,20 @@ class _SpyButtonState extends State<SpyButton> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.style == SpyButtonStyle.gold ||
+        widget.style == SpyButtonStyle.neonOutline) {
+      return _buildNeon(context);
+    }
     final enabled = widget.onPressed != null;
     final primary = widget.style == SpyButtonStyle.primary;
     final danger = widget.style == SpyButtonStyle.danger;
     final fill = switch (widget.style) {
       SpyButtonStyle.primary =>
         _pressed ? AppColors.primaryPressed : AppColors.primary,
-      SpyButtonStyle.secondary => Colors.transparent,
+      // Gold and neonOutline are drawn by _buildNeon and never reach here.
+      SpyButtonStyle.secondary ||
+      SpyButtonStyle.gold ||
+      SpyButtonStyle.neonOutline => Colors.transparent,
       SpyButtonStyle.danger =>
         _pressed ? const Color(0xFFD42032) : AppColors.imposter,
     };
@@ -144,6 +156,96 @@ class _SpyButtonState extends State<SpyButton> {
                           fg,
                           size: 18,
                         ).copyWith(letterSpacing: 0.8),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNeon(BuildContext context) {
+    final enabled = widget.onPressed != null;
+    final gold = widget.style == SpyButtonStyle.gold;
+    final glow = gold ? const Color(0xFFFFB020) : AppColors.primary;
+    final fg = gold ? AppColors.buttonInk : AppColors.primary;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: widget.label,
+      child: Opacity(
+        opacity: enabled ? 1 : 0.45,
+        child: GestureDetector(
+          onTapDown: enabled ? (_) => setState(() => _pressed = true) : null,
+          onTapUp: enabled ? (_) => setState(() => _pressed = false) : null,
+          onTapCancel: enabled ? () => setState(() => _pressed = false) : null,
+          onTap: widget.onPressed,
+          child: AnimatedScale(
+            scale: _pressed ? 0.97 : 1,
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOut,
+            child: Container(
+              height: widget.height,
+              width: double.infinity,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+                gradient: gold
+                    ? LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: _pressed
+                            ? const [Color(0xFFF2C740), Color(0xFFE59A0C)]
+                            : const [
+                                Color(0xFFFFE27A),
+                                Color(0xFFFFC52E),
+                                Color(0xFFF5A10F),
+                              ],
+                      )
+                    : null,
+                color: gold ? null : const Color(0xE6081226),
+                border: Border.all(
+                  color: gold ? const Color(0xFFFFE9A8) : AppColors.primary,
+                  width: gold ? 1.5 : 2.5,
+                ),
+                boxShadow: enabled
+                    ? [
+                        BoxShadow(
+                          color: glow.withValues(alpha: gold ? 0.6 : 0.5),
+                          blurRadius: 22,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (widget.icon != null) ...[
+                    Icon(widget.icon, size: widget.fontSize * 1.5, color: fg),
+                    const SizedBox(width: 12),
+                  ],
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        widget.label,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontFamily: AppFonts.body,
+                          fontWeight: FontWeight.w900,
+                          fontSize: widget.fontSize,
+                          letterSpacing: 0.6,
+                          color: fg,
+                          shadows: gold
+                              ? null
+                              : [Shadow(color: glow, blurRadius: 10)],
+                        ),
                       ),
                     ),
                   ),

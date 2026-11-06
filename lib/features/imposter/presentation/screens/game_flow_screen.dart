@@ -16,6 +16,7 @@ import '../../domain/enums/game_phase.dart';
 import '../providers/game_controller.dart';
 import '../providers/game_session.dart';
 import '../widgets/classified_plaque.dart';
+import '../widgets/neon_widgets.dart';
 import '../widgets/secret_reveal_card.dart';
 
 const _sceneSize = Size(1090, 2260);
@@ -97,6 +98,7 @@ class _GameFlowScreenState extends ConsumerState<GameFlowScreen>
           session.phase == GamePhase.home ||
               session.phase == GamePhase.playerSetup ||
               session.phase == GamePhase.configuration ||
+              session.phase == GamePhase.settings ||
               session.phase.isRevealFlow ||
               session.phase == GamePhase.allRevealed ||
               session.phase == GamePhase.roundReady
@@ -185,52 +187,97 @@ class _HomeView extends StatelessWidget {
 
   static const _background = 'assets/images/home_background.webp';
 
+  /// Rows of artwork above the moon, painted over to plain night sky so the
+  /// title can be drawn in code below the status bar.
+  static const _skyBand = 300.0;
+
+  /// Bottom edge of the folders in the artwork.
+  static const _foldersBottom = 1185.0;
+
+  /// Same colour as the top of the artwork, so the gap above it is seamless.
+  static const _sky = Color(0xFF070916);
+
   @override
   Widget build(BuildContext context) {
+    final topInset = MediaQuery.paddingOf(context).top;
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Title and tagline are baked into the artwork.
-          const _SceneImage(_background),
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 4, right: 12),
-                child: SpyIconButton(
+      backgroundColor: _sky,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final scale = math.max(
+            constraints.maxWidth / _sceneSize.width,
+            constraints.maxHeight / _sceneSize.height,
+          );
+          final titleTop = topInset + 12;
+          final titleBottom = titleTop + SpyGameTitle.height;
+          // Push the art down so the moon sits just under the title. On short
+          // screens give up to 24px of that back so the folders clear the
+          // buttons.
+          final wanted = titleBottom + 6 - _skyBand * scale;
+          final bottomInset = MediaQuery.paddingOf(context).bottom;
+          final buttonsTop = constraints.maxHeight - bottomInset - 24 - 142;
+          final fitsAbove = buttonsTop - 8 - _foldersBottom * scale;
+          final imageTop = math.max(
+            0.0,
+            math.max(wanted - 24, math.min(wanted, fitsAbove)),
+          );
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Positioned(
+                top: imageTop,
+                left: 0,
+                right: 0,
+                height: _sceneSize.height * scale,
+                child: const _SceneImage(_background),
+              ),
+              Positioned(
+                top: titleTop,
+                left: 16,
+                right: 16,
+                child: const SpyGameTitle(),
+              ),
+              Positioned(
+                top: topInset + 8,
+                right: 14,
+                child: NeonCircleButton(
                   icon: Icons.settings_rounded,
                   tooltip: 'Settings',
+                  size: 48,
                   onPressed: onSettings,
                 ),
               ),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SpyButton(
-                    label: 'PLAY',
-                    icon: Icons.play_arrow_rounded,
-                    onPressed: onStart,
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SpyButton(
+                        label: 'PLAY',
+                        icon: Icons.play_arrow_rounded,
+                        style: SpyButtonStyle.gold,
+                        height: 64,
+                        fontSize: 28,
+                        onPressed: onStart,
+                      ),
+                      const SizedBox(height: 18),
+                      SpyButton(
+                        label: 'HOW TO PLAY',
+                        icon: Icons.menu_book_rounded,
+                        style: SpyButtonStyle.neonOutline,
+                        height: 60,
+                        fontSize: 22,
+                        onPressed: onHowTo,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  SpyButton(
-                    label: 'HOW TO PLAY',
-                    icon: Icons.menu_book_rounded,
-                    style: SpyButtonStyle.secondary,
-                    onPressed: onHowTo,
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -1294,137 +1341,182 @@ class _SettingsView extends StatelessWidget {
   final GameSession session;
   final GameController ctrl;
 
+  static const _background = 'assets/images/settings_background.webp';
+
+  static IconData _themeIcon(AppThemeMode m) => switch (m) {
+    AppThemeMode.system => Icons.brightness_auto_outlined,
+    AppThemeMode.light => Icons.light_mode_outlined,
+    AppThemeMode.dark => Icons.dark_mode_rounded,
+  };
+
   @override
   Widget build(BuildContext context) {
     final s = session.settings;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            SpyIconButton(
-              icon: Icons.arrow_back_rounded,
-              tooltip: 'Back',
-              onPressed: ctrl.goHome,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'SETTINGS',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.display(AppColors.accent, size: 26),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: ListView(
-            children: [
-              Text(
-                'APPEARANCE',
-                style: AppTextStyles.dossier(AppColors.textSecondary),
-              ),
-              const SizedBox(height: 8),
-              DossierCard(
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: AppThemeMode.values.map((m) {
-                    final selected = s.themeMode == m;
-                    return ChoiceChip(
-                      label: Text(m.label),
-                      selected: selected,
-                      labelStyle: AppTextStyles.label(
-                        selected
-                            ? AppColors.buttonInk
-                            : AppColors.textSecondary,
-                      ),
-                      onSelected: (_) => ctrl.setThemeMode(m),
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'GAMEPLAY',
-                style: AppTextStyles.dossier(AppColors.textSecondary),
-              ),
-              const SizedBox(height: 8),
-              DossierCard(
-                child: Column(
-                  children: [
-                    _ToggleRow(
-                      label: 'Haptic feedback',
-                      value: s.hapticEnabled,
-                      onChanged: ctrl.setHapticEnabled,
-                    ),
-                    _ToggleRow(
-                      label: 'Animations',
-                      value: s.animationsEnabled,
-                      onChanged: ctrl.setAnimationsEnabled,
-                    ),
-                    _ToggleRow(
-                      label: 'Sound effects',
-                      value: s.soundEnabled,
-                      onChanged: ctrl.setSoundEnabled,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              const _AdPrivacySection(),
-              SpyButton(
-                label: 'RESET SETTINGS',
-                style: SpyButtonStyle.secondary,
-                onPressed: ctrl.resetSettings,
-              ),
-              const SizedBox(height: 10),
-              SpyButton(
-                label: 'HOW TO PLAY',
-                style: SpyButtonStyle.secondary,
-                onPressed: ctrl.openHowToPlay,
-              ),
-              const SizedBox(height: 18),
-              Text(
-                'Spy Imposter Game  ·  1.0.0',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.label(AppColors.textSecondary),
-              ),
-            ],
+    const divider = Divider(
+      height: 1,
+      thickness: 1,
+      indent: 16,
+      endIndent: 16,
+      color: Color(0x553D5A90),
+    );
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Anchored to the bottom so the magnifier and the folder stay in
+          // view.
+          Image.asset(
+            _background,
+            fit: BoxFit.cover,
+            alignment: Alignment.bottomCenter,
+            excludeFromSemantics: true,
+            errorBuilder: (_, _, _) => const ColoredBox(color: AppColors.night),
           ),
-        ),
-      ],
+          // Darken the sky and skyline behind the controls.
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xE6050C1E),
+                  Color(0xD9061128),
+                  Color(0x99061128),
+                  Color(0x33061128),
+                ],
+                stops: [0, 0.5, 0.75, 0.9],
+              ),
+            ),
+          ),
+          SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              children: [
+                SizedBox(
+                  height: 116,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        left: 0,
+                        right: 120,
+                        top: 18,
+                        child: Row(
+                          children: [
+                            NeonCircleButton(
+                              icon: Icons.arrow_back_rounded,
+                              tooltip: 'Back',
+                              onPressed: ctrl.goHome,
+                            ),
+                            const SizedBox(width: 16),
+                            const Flexible(child: BrushTitle('SETTINGS')),
+                          ],
+                        ),
+                      ),
+                      const Positioned(top: 10, right: 0, child: SpyPolaroid()),
+                    ],
+                  ),
+                ),
+                const SectionRibbon(
+                  icon: Icons.settings_rounded,
+                  label: 'APPEARANCE',
+                ),
+                const SizedBox(height: 12),
+                NeonPanel(
+                  child: Row(
+                    children: [
+                      for (final m in AppThemeMode.values) ...[
+                        if (m != AppThemeMode.values.first)
+                          const SizedBox(width: 10),
+                        Expanded(
+                          child: ChoicePill(
+                            label: m.label,
+                            icon: _themeIcon(m),
+                            selected: s.themeMode == m,
+                            onTap: () => ctrl.setThemeMode(m),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const SectionRibbon(
+                  icon: Icons.sports_esports_rounded,
+                  label: 'GAMEPLAY',
+                ),
+                const SizedBox(height: 12),
+                NeonPanel(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Column(
+                      children: [
+                        NeonToggleRow(
+                          icon: Icons.vibration_rounded,
+                          label: 'Haptic feedback',
+                          value: s.hapticEnabled,
+                          onChanged: ctrl.setHapticEnabled,
+                        ),
+                        divider,
+                        NeonToggleRow(
+                          icon: Icons.play_arrow_outlined,
+                          label: 'Animations',
+                          value: s.animationsEnabled,
+                          onChanged: ctrl.setAnimationsEnabled,
+                        ),
+                        divider,
+                        NeonToggleRow(
+                          icon: Icons.volume_up_rounded,
+                          label: 'Sound effects',
+                          value: s.soundEnabled,
+                          onChanged: ctrl.setSoundEnabled,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const _AdPrivacySection(),
+                SpyButton(
+                  label: 'RESET SETTINGS',
+                  icon: Icons.refresh_rounded,
+                  style: SpyButtonStyle.neonOutline,
+                  height: 60,
+                  fontSize: 20,
+                  onPressed: ctrl.resetSettings,
+                ),
+                const SizedBox(height: 16),
+                SpyButton(
+                  label: 'HOW TO PLAY',
+                  icon: Icons.menu_book_outlined,
+                  style: SpyButtonStyle.neonOutline,
+                  height: 60,
+                  fontSize: 20,
+                  onPressed: ctrl.openHowToPlay,
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Spy Imposter Game  ·  1.0.0',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.label(AppColors.textSecondary).copyWith(
+                    fontSize: 15,
+                    shadows: const [Shadow(color: Colors.black, blurRadius: 6)],
+                  ),
+                ),
+                // Room to scroll the magnifier and folder into view.
+                const SizedBox(height: 200),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 /// Shown only when UMP requires a privacy-options entry point.
-class _ToggleRow extends StatelessWidget {
-  const _ToggleRow({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String label;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(label, style: AppTextStyles.body(AppColors.textPrimary)),
-        ),
-        Switch(value: value, onChanged: onChanged),
-      ],
-    );
-  }
-}
-
 class _AdPrivacySection extends ConsumerStatefulWidget {
   const _AdPrivacySection();
 
@@ -1450,28 +1542,30 @@ class _AdPrivacySectionState extends ConsumerState<_AdPrivacySection> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('ADS', style: AppTextStyles.dossier(AppColors.textSecondary)),
-            const SizedBox(height: 8),
-            DossierCard(
+            const SectionRibbon(icon: Icons.privacy_tip_outlined, label: 'ADS'),
+            const SizedBox(height: 12),
+            GestureDetector(
               onTap: () {
                 ref.read(adsServiceProvider).showPrivacyOptions();
               },
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Ad privacy choices',
-                    style: AppTextStyles.title(AppColors.textPrimary),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Manage how ads are personalized',
-                    style: AppTextStyles.body(AppColors.textSecondary),
-                  ),
-                ],
+              child: NeonPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Ad privacy choices',
+                      style: AppTextStyles.title(AppColors.textPrimary),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Manage how ads are personalized',
+                      style: AppTextStyles.body(AppColors.textSecondary),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
           ],
         );
       },
