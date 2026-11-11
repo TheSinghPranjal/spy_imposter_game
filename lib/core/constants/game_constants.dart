@@ -6,7 +6,9 @@ class GameConstants {
   static const int maxNameLength = 20;
   static const int recentWordLimit = 20;
   static const int holdToRevealMs = 800;
-  static const int splashDurationMs = 1400;
+
+  /// How long the branded splash stays up before the home screen.
+  static const int splashDurationMs = 2000;
   static const int protectedPositions = 2;
   static const String wordAssetPath = 'assets/data/imposter_words.json';
   static const int expectedWordCount = 600;
