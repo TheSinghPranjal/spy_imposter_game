@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/imposter/domain/enums/app_theme_mode.dart';
 import '../features/imposter/presentation/providers/game_controller.dart';
-import '../features/imposter/presentation/screens/game_flow_screen.dart';
+import '../features/imposter/presentation/screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 
 class SpyImposterGameApp extends ConsumerWidget {
@@ -24,7 +24,7 @@ class SpyImposterGameApp extends ConsumerWidget {
         AppThemeMode.light => ThemeMode.light,
         AppThemeMode.dark => ThemeMode.dark,
       },
-      home: const GameFlowScreen(),
+      home: const SplashGate(),
     );
   }
 }
